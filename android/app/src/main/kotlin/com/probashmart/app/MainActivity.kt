@@ -1,4 +1,4 @@
-package com.probashmart.probash_mart_app
+package com.probashmart.app
 
 import io.flutter.embedding.android.FlutterActivity
 
