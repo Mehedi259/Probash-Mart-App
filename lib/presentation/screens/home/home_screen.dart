@@ -1,23 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:carousel_slider/carousel_slider.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_assets.dart';
-import '../../../core/network/api_client.dart';
 import '../../../core/utils/ui_helpers.dart';
 import '../../../providers/banner_provider.dart';
 import '../../../providers/categories_provider.dart';
 import '../../../providers/products_provider.dart';
-import '../../widgets/category_card.dart';
+import '../../../providers/country_provider.dart';
 import '../../widgets/product_card.dart';
-import '../../widgets/section_header.dart';
-import '../../widgets/countdown_timer_widget.dart';
 import '../../widgets/shimmer_loader.dart';
 import '../search/search_screen.dart';
-import '../categories/categories_screen.dart';
-import '../product/product_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,22 +20,26 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _bannerCurrentIndex = 0;
+  String _selectedCategory = 'সব';
 
   @override
   Widget build(BuildContext context) {
     final bannerProvider = context.watch<BannerProvider>();
     final categoriesProvider = context.watch<CategoriesProvider>();
     final productsProvider = context.watch<ProductsProvider>();
+    final country = context.watch<CountryProvider>().selectedCountry;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(context),
+      appBar: _buildAppBar(context, country),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => UiHelpers.openWhatsApp(),
-        backgroundColor: AppColors.whatsapp,
-        elevation: 4,
-        child: const Icon(LucideIcons.messageCircle, color: Colors.white, size: 28),
+        onPressed: () => UiHelpers.openWhatsApp(
+          text: 'আসসালামু আলাইকুম, আমি ${country.name} থেকে দেশে পরিবারের জন্য উপহার পাঠাতে চাই।',
+        ),
+        backgroundColor: const Color(0xFF25D366),
+        elevation: 3,
+        tooltip: 'WhatsApp সাহায্য',
+        child: const Icon(LucideIcons.messageCircle, color: Colors.white, size: 26),
       ),
       body: RefreshIndicator(
         color: AppColors.primary,
@@ -55,56 +52,30 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 80),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search Bar Trigger
+              // Clean Search Bar
               _buildSearchBar(context),
 
-              // Hero Banner Slider
-              _buildHeroSlider(bannerProvider),
+              // Premium Hero Card
+              _buildHeroCard(country),
+
+              const SizedBox(height: 18),
+
+              // Category Horizontal Filter Chips
+              _buildCategoryChips(categoriesProvider),
 
               const SizedBox(height: 16),
 
-              // Categories Header & Horizontal List
-              SectionHeader(
-                title: 'পণ্য ক্যাটাগরি',
-                subtitle: 'আপনার প্রয়োজনীয় গ্রোসারি বেছে নিন',
-                onSeeAll: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CategoriesScreen()),
-                  );
-                },
-              ),
-              _buildCategoriesList(categoriesProvider),
+              // Products Section Header & Responsive Grid
+              _buildProductsSection(productsProvider),
 
               const SizedBox(height: 20),
 
-              // Flash Deals with Live Countdown Timer
-              _buildFlashDealsSection(productsProvider),
-
-              const SizedBox(height: 24),
-
-              // Best Sellers Section
-              _buildBestSellersSection(productsProvider),
-
-              const SizedBox(height: 20),
-
-              // Promo Banner Card
-              _buildPromoCard(),
-
-              const SizedBox(height: 20),
-
-              // Featured Products Grid
-              _buildFeaturedProductsSection(productsProvider),
-
-              const SizedBox(height: 24),
-
-              // Why Choose Probash Mart Section
-              _buildWhyProbashMart(),
-
-              const SizedBox(height: 32),
+              // Clean Help Banner
+              _buildAssistanceCard(country),
             ],
           ),
         ),
@@ -112,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, CountryOption country) {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
@@ -121,49 +92,144 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Image.asset(
             AppAssets.logo,
-            height: 38,
+            height: 36,
             fit: BoxFit.contain,
           ),
           const Spacer(),
-          // Location Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(LucideIcons.mapPin, color: AppColors.primary, size: 13),
-                SizedBox(width: 4),
-                Text(
-                  'ওমান / বাংলাদেশ',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.onPrimaryContainer,
+          // Interactive Country / Currency Selector Badge
+          InkWell(
+            onTap: () => _showCountrySelector(context),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(country.flag, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 5),
+                  Text(
+                    country.name,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 3),
+                  const Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
       actions: [
         IconButton(
-          icon: const Icon(LucideIcons.phoneCall, color: AppColors.primary, size: 22),
-          onPressed: () => UiHelpers.makePhoneCall(null),
-          tooltip: 'সরাসরি কল করুন',
+          icon: const Icon(LucideIcons.messageCircle, color: Color(0xFF25D366), size: 22),
+          onPressed: () => UiHelpers.openWhatsApp(),
+          tooltip: 'সরাসরি হোয়াটসঅ্যাপ করুন',
         ),
         const SizedBox(width: 8),
       ],
     );
   }
 
+  void _showCountrySelector(BuildContext context) {
+    final countryProvider = context.read<CountryProvider>();
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (ctx) {
+        final current = ctx.watch<CountryProvider>().selectedCountry;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'আপনার অবস্থান ও কারেন্সি নির্বাচন করুন',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'যে দেশ থেকে অর্ডার করছেন সেটি বেছে নিন। মূল্যের হিসাব সে অনুযায়ী পরিবর্তিত হবে।',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 14),
+              ...CountryProvider.supportedCountries.map((c) {
+                final isSelected = c.code == current.code;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.primaryContainer.withValues(alpha: 0.45) : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected ? AppColors.primary : AppColors.border,
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: ListTile(
+                    dense: true,
+                    leading: Text(c.flag, style: const TextStyle(fontSize: 22)),
+                    title: Text(
+                      c.name,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      c.code == 'BD' ? 'মূল্য: ৳ (টাকা)' : 'কারেন্সি: ${c.currencyCode}',
+                      style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(Icons.check_circle, color: AppColors.primary, size: 20)
+                        : null,
+                    onTap: () {
+                      countryProvider.setCountry(c);
+                      Navigator.pop(ctx);
+                    },
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildSearchBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -186,14 +252,13 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'ইলিশ, চাল, ডাল বা মশলা খুঁজুন...',
+                  'মধু, সরিষার তেল, পাঞ্জাবি, শাড়ি বা শীতের পোশাক...',
                   style: TextStyle(
                     color: AppColors.textMuted,
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                 ),
               ),
-              Icon(LucideIcons.slidersHorizontal, color: AppColors.primary, size: 18),
             ],
           ),
         ),
@@ -201,338 +266,189 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeroSlider(BannerProvider bannerProvider) {
-    final banners = bannerProvider.banners;
-    if (banners.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        child: ShimmerLoader(width: double.infinity, height: 160, borderRadius: 16),
-      );
-    }
-
-    return Column(
-      children: [
-        CarouselSlider(
-          options: CarouselOptions(
-            height: 170,
-            autoPlay: true,
-            autoPlayInterval: const Duration(seconds: 4),
-            viewportFraction: 0.92,
-            enlargeCenterPage: true,
-            enlargeFactor: 0.2,
-            onPageChanged: (index, reason) {
-              setState(() => _bannerCurrentIndex = index);
-            },
+  Widget _buildHeroCard(CountryOption country) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F5132), Color(0xFF146C43)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          items: banners.map((banner) {
-            return Container(
-              width: double.infinity,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F5132).withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: AppColors.mediumShadow,
+                color: Colors.white.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (banner.image.startsWith('assets/'))
-                      Image.asset(banner.image, fit: BoxFit.cover)
-                    else
-                      Image.network(
-                        ApiClient().resolveImageUrl(banner.image),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Image.asset(AppAssets.heroSlide1, fit: BoxFit.cover),
-                      ),
-                    // Gradient overlay
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.65),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 14,
-                      left: 16,
-                      right: 16,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            banner.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (banner.subtitle != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              banner.subtitle!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.9),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
+              child: Text(
+                '${country.flag} ${country.name} • দেশে প্রিয়জনের মুখে হাসি ফুটান',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            );
-          }).toList(),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'আপনি দূরে, ভালোবাসা কাছে',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'প্রবাসী ভাইয়েরা দেশের পরিবারে খাঁটি ও প্রিমিয়াম উপহার পাঠান সহজেই। পেমেন্ট ও ডেলিভারি শতভাগ নিশ্চিত সরাসরি হোয়াটসঅ্যাপে।',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 14),
+            // Trust badges row
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _buildTrustChip('🛡️ শতভাগ খাঁটি পণ্য'),
+                _buildTrustChip('🚚 হোম ডেলিভারি'),
+                _buildTrustChip('💬 ১-ট্যাপ WhatsApp অর্ডার'),
+              ],
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        AnimatedSmoothIndicator(
-          activeIndex: _bannerCurrentIndex,
-          count: banners.length,
-          effect: const ExpandingDotsEffect(
-            activeDotColor: AppColors.primary,
-            dotColor: AppColors.border,
-            dotHeight: 6,
-            dotWidth: 6,
-            expansionFactor: 3,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildCategoriesList(CategoriesProvider provider) {
-    if (provider.isLoading && provider.categories.isEmpty) {
-      return SizedBox(
-        height: 100,
-        child: ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          scrollDirection: Axis.horizontal,
-          itemCount: 6,
-          separatorBuilder: (_, __) => const SizedBox(width: 14),
-          itemBuilder: (_, __) => const ShimmerLoader(width: 64, height: 64, borderRadius: 32),
-        ),
-      );
+  Widget _buildTrustChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChips(CategoriesProvider categoriesProvider) {
+    final categories = categoriesProvider.categories;
+    final List<String> chips = ['সব'];
+    if (categories.isNotEmpty) {
+      chips.addAll(categories.map((c) => c.name));
+    } else {
+      chips.addAll([
+        'খাঁটি খাদ্যপণ্য',
+        'বাবার পাঞ্জাবি',
+        'শীতের পোশাক',
+        'মায়ের শাড়ি',
+        'প্রিয়জনের উপহার',
+        'ফ্যামিলি বাজার কম্বো',
+      ]);
     }
 
-    final categories = provider.categories;
     return SizedBox(
-      height: 105,
+      height: 38,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemCount: chips.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          return CategoryCard(category: categories[index]);
+          final cat = chips[index];
+          final isSelected = _selectedCategory == cat;
+
+          return InkWell(
+            onTap: () {
+              setState(() => _selectedCategory = cat);
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : AppColors.border,
+                ),
+                boxShadow: isSelected ? AppColors.softShadow : null,
+              ),
+              child: Text(
+                cat,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? Colors.white : AppColors.textPrimary,
+                ),
+              ),
+            ),
+          );
         },
       ),
     );
   }
 
-  Widget _buildFlashDealsSection(ProductsProvider provider) {
-    final flashDeals = provider.flashDeals;
-    if (flashDeals.isEmpty && !provider.isLoadingHome) return const SizedBox.shrink();
+  Widget _buildProductsSection(ProductsProvider provider) {
+    final allProducts = provider.featuredProducts;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF6F0),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final filteredProducts = _selectedCategory == 'সব'
+        ? allProducts
+        : allProducts.where((p) {
+            final cat = p.categoryName?.toLowerCase() ?? '';
+            final filter = _selectedCategory.toLowerCase();
+            return cat.contains(filter) || filter.contains(cat) || p.name.toLowerCase().contains(filter);
+          }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(LucideIcons.zap, color: AppColors.primary, size: 20),
-              const SizedBox(width: 6),
-              const Text(
-                'ফ্ল্যাশ ডিলস',
-                style: TextStyle(
+              Text(
+                _selectedCategory == 'সব' ? 'জনপ্রিয় উপহার প্যাকেজ' : _selectedCategory,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primaryDark,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              const Spacer(),
-              const CountdownTimerWidget(),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          if (provider.isLoadingHome && flashDeals.isEmpty)
-            SizedBox(
-              height: 250,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: 3,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, __) => const SizedBox(
-                  width: 165,
-                  child: ShimmerLoader(width: 165, height: 250, borderRadius: 16),
-                ),
-              ),
-            )
-          else
-            SizedBox(
-              height: 255,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: flashDeals.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  return ProductCard(
-                    product: flashDeals[index],
-                    width: 165,
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBestSellersSection(ProductsProvider provider) {
-    final bestSellers = provider.bestSellers;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: 'সর্বাধিক বিক্রিত পণ্য',
-          subtitle: 'গ্রাহকদের পছন্দের সেরা খাদ্যপণ্য',
-          icon: LucideIcons.flame,
-          onSeeAll: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const ProductListScreen(ordering: '-sold_count', categoryName: 'বেস্ট সেলার্স'),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 255,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            itemCount: bestSellers.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              return ProductCard(
-                product: bestSellers[index],
-                width: 165,
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPromoCard() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        height: 130,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: AppColors.softShadow,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.asset(AppAssets.heroBannerBasket, fit: BoxFit.cover),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.secondary.withValues(alpha: 0.85),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'হোয়াটসঅ্যাপে সরাসরি অর্ডার',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'পণ্য লিখে বা ছবি তুলে পাঠিয়ে দিন আমাদের নম্বরে',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.whatsapp,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: () => UiHelpers.openWhatsApp(),
-                      icon: const Icon(LucideIcons.messageCircle, size: 14, color: Colors.white),
-                      label: const Text('মেসেজ পাঠান', style: TextStyle(fontSize: 12, color: Colors.white)),
-                    ),
-                  ],
-                ),
+              Text(
+                '${filteredProducts.length}টি পণ্য',
+                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
+        const SizedBox(height: 12),
 
-  Widget _buildFeaturedProductsSection(ProductsProvider provider) {
-    final products = provider.featuredProducts;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: 'জনপ্রিয় পণ্যসমূহ',
-          subtitle: 'টাটকা ও নির্ভেজাল পণ্যের সমাহার',
-          icon: LucideIcons.sparkles,
-          onSeeAll: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const ProductListScreen(categoryName: 'সকল পণ্য'),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-
-        if (provider.isLoadingHome && products.isEmpty)
+        if (provider.isLoadingHome && filteredProducts.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GridView.builder(
@@ -540,12 +456,22 @@ class _HomeScreenState extends State<HomeScreen> {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 0.68,
+                childAspectRatio: 0.54,
                 crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                mainAxisSpacing: 14,
               ),
               itemCount: 4,
               itemBuilder: (_, __) => ShimmerLoader.productCardPlaceholder(),
+            ),
+          )
+        else if (filteredProducts.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(
+              child: Text(
+                'এই ক্যাটাগরিতে বর্তমানে কোনো পণ্য নেই।',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+              ),
             ),
           )
         else
@@ -556,13 +482,13 @@ class _HomeScreenState extends State<HomeScreen> {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 0.68,
+                childAspectRatio: 0.54,
                 crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                mainAxisSpacing: 14,
               ),
-              itemCount: products.length,
+              itemCount: filteredProducts.length,
               itemBuilder: (context, index) {
-                return ProductCard(product: products[index]);
+                return ProductCard(product: filteredProducts[index]);
               },
             ),
           ),
@@ -570,78 +496,57 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildWhyProbashMart() {
-    final features = [
-      {'icon': LucideIcons.checkCircle2, 'title': '১০০% খাঁটি পণ্য', 'desc': 'দেশীয় গুণগত মান'},
-      {'icon': LucideIcons.truck, 'title': 'দ্রুত ডেলিভারি', 'desc': 'আপনার দরজায়'},
-      {'icon': LucideIcons.shieldCheck, 'title': 'ক্যাশ অন ডেলিভারি', 'desc': 'নিরাপদ পেমেন্ট'},
-      {'icon': LucideIcons.headphones, 'title': 'সার্বক্ষণিক সাপোর্ট', 'desc': 'হোয়াটসঅ্যাপে সেবা'},
-    ];
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'কেন প্রবাসমার্ট সেরা?',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+  Widget _buildAssistanceCard(CountryOption country) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppColors.softShadow,
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF25D366).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(LucideIcons.messageCircle, color: Color(0xFF25D366), size: 22),
             ),
-          ),
-          const SizedBox(height: 14),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 2.3,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: features.length,
-            itemBuilder: (context, index) {
-              final item = features[index];
-              return Row(
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryContainer.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(item['icon'] as IconData, color: AppColors.primary, size: 20),
+                  const Text(
+                    'কাস্টম উপহার বা বিশেষ অর্ডার?',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          item['title'] as String,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                        Text(
-                          item['desc'] as String,
-                          style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${country.flag} ${country.name} থেকে সরাসরি ওনারের সাথে কথা বলুন',
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
                   ),
                 ],
-              );
-            },
-          ),
-        ],
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF25D366),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+              ),
+              onPressed: () => UiHelpers.openWhatsApp(),
+              child: const Text('মেসেজ দিন', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }

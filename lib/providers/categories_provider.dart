@@ -35,8 +35,15 @@ class CategoriesProvider with ChangeNotifier {
 
     try {
       final response = await _api.get(ApiEndpoints.categories);
+      List<dynamic>? rawList;
       if (response is List) {
-        _categories = response
+        rawList = response;
+      } else if (response is Map<String, dynamic> && response['results'] is List) {
+        rawList = response['results'] as List;
+      }
+
+      if (rawList != null && rawList.isNotEmpty) {
+        _categories = rawList
             .map((item) => CategoryModel.fromJson(item as Map<String, dynamic>))
             .where((cat) => cat.isActive)
             .toList();

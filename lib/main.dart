@@ -12,6 +12,7 @@ import 'providers/cart_provider.dart';
 import 'providers/wishlist_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/banner_provider.dart';
+import 'providers/country_provider.dart';
 import 'presentation/screens/splash/splash_screen.dart';
 
 void main() async {
@@ -30,10 +31,16 @@ void main() async {
   final storage = StorageService();
   await storage.init();
 
-  // Restore custom base url if set by user in profile settings
+  // Restore custom base url if set by user in profile settings, otherwise use live production URL
   final savedBaseUrl = storage.customBaseUrl;
-  if (savedBaseUrl != null && savedBaseUrl.isNotEmpty) {
+  if (savedBaseUrl != null &&
+      savedBaseUrl.isNotEmpty &&
+      !savedBaseUrl.contains('10.0.2.2') &&
+      !savedBaseUrl.contains('127.0.0.1') &&
+      !savedBaseUrl.contains('localhost')) {
     ApiClient().updateBaseUrl(savedBaseUrl);
+  } else {
+    ApiClient().updateBaseUrl(AppConstants.defaultBaseUrl);
   }
 
   runApp(const ProbashMartApp());
@@ -53,6 +60,7 @@ class ProbashMartApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WishlistProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => BannerProvider()),
+        ChangeNotifierProvider(create: (_) => CountryProvider()),
       ],
       child: MaterialApp(
         title: AppConstants.appName,

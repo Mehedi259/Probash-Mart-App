@@ -39,7 +39,7 @@ class ProfileScreen extends StatelessWidget {
             TextField(
               controller: controller,
               decoration: const InputDecoration(
-                hintText: 'http://127.0.0.1:8000',
+                hintText: 'https://api.probashmart.com',
                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
@@ -48,16 +48,12 @@ class ProfileScreen extends StatelessWidget {
               spacing: 8,
               children: [
                 ActionChip(
+                  label: const Text('Live Server (api.probashmart.com)', style: TextStyle(fontSize: 11)),
+                  onPressed: () => controller.text = AppConstants.productionBaseUrl,
+                ),
+                ActionChip(
                   label: const Text('Local (127.0.0.1)', style: TextStyle(fontSize: 11)),
                   onPressed: () => controller.text = 'http://127.0.0.1:8000',
-                ),
-                ActionChip(
-                  label: const Text('Android (10.0.2.2)', style: TextStyle(fontSize: 11)),
-                  onPressed: () => controller.text = 'http://10.0.2.2:8000',
-                ),
-                ActionChip(
-                  label: const Text('Live Server', style: TextStyle(fontSize: 11)),
-                  onPressed: () => controller.text = AppConstants.productionBaseUrl,
                 ),
               ],
             ),

@@ -23,8 +23,15 @@ class BannerProvider with ChangeNotifier {
 
     try {
       final response = await _api.get(ApiEndpoints.banners);
-      if (response is List && response.isNotEmpty) {
-        _banners = response
+      List<dynamic>? rawList;
+      if (response is List) {
+        rawList = response;
+      } else if (response is Map<String, dynamic> && response['results'] is List) {
+        rawList = response['results'] as List;
+      }
+
+      if (rawList != null && rawList.isNotEmpty) {
+        _banners = rawList
             .map((item) => BannerModel.fromJson(item as Map<String, dynamic>))
             .where((b) => b.isActive)
             .toList();

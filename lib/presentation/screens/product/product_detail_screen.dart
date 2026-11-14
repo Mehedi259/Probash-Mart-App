@@ -5,14 +5,14 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/api_client.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../core/utils/ui_helpers.dart';
 import '../../../data/models/product_model.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/wishlist_provider.dart';
 import '../../../providers/products_provider.dart';
 import '../../widgets/product_card.dart';
-import '../checkout/checkout_screen.dart';
+import '../../widgets/whatsapp_order_sheet.dart';
+import '../../../providers/country_provider.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
@@ -145,53 +145,69 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 12),
 
                   // Price & Stock
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        Formatters.formatPrice(product.price),
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      if (product.comparePrice != null && product.comparePrice! > product.price) ...[
-                        const SizedBox(width: 10),
-                        Text(
-                          Formatters.formatPrice(product.comparePrice),
-                          style: const TextStyle(
-                            fontSize: 15,
-                            color: AppColors.textMuted,
-                            decoration: TextDecoration.lineThrough,
+                  Builder(
+                    builder: (ctx) {
+                      final country = ctx.watch<CountryProvider>().selectedCountry;
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            country.formatPrice(product.price),
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.primary,
+                            ),
                           ),
-                        ),
-                      ],
-                      const Spacer(),
-                      // Stock Status
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.successLight,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.check_circle, size: 14, color: AppColors.success),
-                            SizedBox(width: 4),
+                          if (country.code != 'BD') ...[
+                            const SizedBox(width: 8),
                             Text(
-                              'স্টকে আছে',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.success,
+                              '৳${product.price.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textMuted,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                    ],
+                          if (product.comparePrice != null && product.comparePrice! > product.price) ...[
+                            const SizedBox(width: 10),
+                            Text(
+                              country.formatPrice(product.comparePrice!),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textMuted,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
+                          // Stock Status
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.successLight,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.check_circle, size: 14, color: AppColors.success),
+                                SizedBox(width: 4),
+                                Text(
+                                  'স্টকে আছে',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.success,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 20),
@@ -251,18 +267,41 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                   const SizedBox(height: 20),
 
+                  // Pricing in OMR and BDT
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        '${(product.price / 310.0).toStringAsFixed(3)} OMR',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '৳${product.price.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
                   // WhatsApp Instant Order Button
                   InkWell(
-                    onTap: () {
-                      final text = 'হ্যালো প্রবাসমার্ট, আমি ${product.name} (পরিমাণ: $_quantity টি) অর্ডার করতে আগ্রহী।';
-                      UiHelpers.openWhatsApp(text: text);
-                    },
+                    onTap: () => WhatsAppOrderSheet.show(context, product: product),
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
-                        color: AppColors.whatsapp,
+                        color: const Color(0xFF25D366),
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: AppColors.softShadow,
                       ),
@@ -272,11 +311,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           Icon(LucideIcons.messageCircle, color: Colors.white, size: 20),
                           SizedBox(width: 8),
                           Text(
-                            'হোয়াটসঅ্যাপে সরাসরি অর্ডার করুন',
+                            'হোয়াটসঅ্যাপে সরাসরি অর্ডার করুন',
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              fontSize: 15,
                             ),
                           ),
                         ],
@@ -469,27 +508,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
             const SizedBox(width: 10),
 
-            // Buy Now Direct Button
+            // WhatsApp Order Button
             Expanded(
               flex: 2,
               child: SizedBox(
                 height: 50,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary, width: 1.5),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   onPressed: () {
-                    cartProvider.addToCart(product, quantity: _quantity);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
-                    );
+                    WhatsAppOrderSheet.show(context, product: product);
                   },
-                  child: const Text(
-                    'এখনই কিনুন',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  icon: const Icon(LucideIcons.messageCircle, size: 18, color: Colors.white),
+                  label: const Text(
+                    'WhatsApp অর্ডার',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
               ),

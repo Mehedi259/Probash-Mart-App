@@ -44,41 +44,42 @@ class ProductsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Fetch Featured
-      try {
-        final featRes = await _api.get(ApiEndpoints.featuredProducts);
-        _featuredProducts = _parseProductList(featRes);
-      } catch (_) {}
+      // Fetch Featured, Best Sellers, and Flash Deals concurrently in parallel
+      final results = await Future.wait([
+        _api.get(ApiEndpoints.featuredProducts).catchError((_) => null),
+        _api.get(ApiEndpoints.bestSellers).catchError((_) => null),
+        _api.get(ApiEndpoints.flashDeals).catchError((_) => null),
+      ]);
 
-      // 2. Fetch Best Sellers
-      try {
-        final bestRes = await _api.get(ApiEndpoints.bestSellers);
-        _bestSellers = _parseProductList(bestRes);
-      } catch (_) {}
+      _featuredProducts = _parseProductList(results[0]);
+      _bestSellers = _parseProductList(results[1]);
+      _flashDeals = _parseProductList(results[2]);
 
-      // 3. Fetch Flash Deals
-      try {
-        final flashRes = await _api.get(ApiEndpoints.flashDeals);
-        _flashDeals = _parseProductList(flashRes);
-      } catch (_) {}
-
-      // 4. Fallback if empty
+      // If featured is empty, try general products endpoint
       if (_featuredProducts.isEmpty) {
-        // Try general products endpoint
-        final genRes = await _api.get(ApiEndpoints.products, queryParameters: {'page_size': 20});
-        final all = _parseProductList(genRes);
-        if (all.isNotEmpty) {
-          _featuredProducts = all.where((p) => p.isFeatured).toList();
-          _bestSellers = all.where((p) => p.isBestSeller).toList();
-          _flashDeals = all.where((p) => p.isFlashDeal).toList();
+        try {
+          final genRes = await _api.get(ApiEndpoints.products, queryParameters: {'page_size': 20});
+          final all = _parseProductList(genRes);
+          if (all.isNotEmpty) {
+            _featuredProducts = all.where((p) => p.isFeatured).toList();
+            if (_featuredProducts.isEmpty) _featuredProducts = all.take(8).toList();
+            if (_bestSellers.isEmpty) _bestSellers = all.where((p) => p.isBestSeller).toList();
+            if (_flashDeals.isEmpty) _flashDeals = all.where((p) => p.isFlashDeal).toList();
+          }
+        } catch (_) {}
+      }
 
-          if (_featuredProducts.isEmpty) _featuredProducts = all.take(8).toList();
-          if (_bestSellers.isEmpty) _bestSellers = all.skip(4).take(8).toList();
-          if (_flashDeals.isEmpty) _flashDeals = all.take(6).toList();
+      // Cross-populate if any subcollection is empty but featured has items
+      if (_featuredProducts.isNotEmpty) {
+        if (_bestSellers.isEmpty) {
+          _bestSellers = _featuredProducts.take(8).toList();
+        }
+        if (_flashDeals.isEmpty) {
+          _flashDeals = _featuredProducts.skip(2).take(6).toList();
         }
       }
 
-      // If still empty, use authentic local fallback
+      // If still empty (e.g. initial offline state), use authentic local fallback
       if (_featuredProducts.isEmpty) {
         _featuredProducts = MockFallbackData.products;
         _bestSellers = MockFallbackData.products.where((p) => p.isBestSeller).toList();

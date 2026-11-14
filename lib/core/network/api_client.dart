@@ -17,8 +17,8 @@ class ApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: _baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -85,17 +85,10 @@ class ApiClient {
     if (rawUrl.startsWith('assets/')) return rawUrl;
 
     if (rawUrl.startsWith('http')) {
-      // Replace localhost/127.0.0.1 or server IP with current active baseUrl if needed
-      final uri = Uri.tryParse(rawUrl);
-      if (uri != null) {
-        if (uri.host == '127.0.0.1' || uri.host == 'localhost' || uri.host == '10.0.2.2' || uri.host == '46.225.103.236') {
-          final currentBase = Uri.parse(_baseUrl);
-          return uri.replace(
-            scheme: currentBase.scheme,
-            host: currentBase.host,
-            port: currentBase.port,
-          ).toString();
-        }
+      // If the URL contains /media/, map it cleanly to active baseUrl
+      if (rawUrl.contains('/media/')) {
+        final mediaPath = '/media/${rawUrl.split('/media/').last}';
+        return '$_baseUrl$mediaPath';
       }
       return rawUrl;
     }

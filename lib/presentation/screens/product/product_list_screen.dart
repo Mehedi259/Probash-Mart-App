@@ -121,9 +121,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 padding: const EdgeInsets.all(16),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.68,
+                  childAspectRatio: 0.54,
                   crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
+                  mainAxisSpacing: 14,
                 ),
                 itemCount: 6,
                 itemBuilder: (_, __) => ShimmerLoader.productCardPlaceholder(),
@@ -138,9 +138,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     padding: const EdgeInsets.all(16),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.68,
+                      childAspectRatio: 0.54,
                       crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
+                      mainAxisSpacing: 14,
                     ),
                     itemCount: products.length,
                     itemBuilder: (context, index) {

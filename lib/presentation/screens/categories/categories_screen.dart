@@ -19,28 +19,27 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   IconData _getCategoryIcon(String? iconName) {
     switch (iconName?.toLowerCase()) {
+      case 'utensils':
+        return LucideIcons.utensils;
+      case 'shirt':
+        return LucideIcons.shirt;
+      case 'snowflake':
+        return LucideIcons.snowflake;
+      case 'sparkles':
+        return LucideIcons.sparkles;
+      case 'gift':
+        return LucideIcons.gift;
+      case 'shopping-bag':
+      case 'shoppingbag':
+        return LucideIcons.shoppingBag;
       case 'leaf':
         return LucideIcons.leaf;
       case 'fish':
         return LucideIcons.fish;
-      case 'drumstick':
-        return LucideIcons.drumstick;
-      case 'wheat':
-        return LucideIcons.wheat;
       case 'flame':
         return LucideIcons.flame;
-      case 'cookie':
-        return LucideIcons.cookie;
-      case 'cupsoda':
-        return LucideIcons.cupSoda;
-      case 'home':
-        return LucideIcons.home;
-      case 'smile':
-        return LucideIcons.smile;
-      case 'cake':
-        return LucideIcons.cake;
       default:
-        return LucideIcons.grid;
+        return LucideIcons.package;
     }
   }
 
@@ -82,16 +81,48 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             child: RefreshIndicator(
               color: AppColors.primary,
               onRefresh: () => provider.loadCategories(forceRefresh: true),
-              child: GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.15,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                ),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
+              child: provider.isLoading && categories.isEmpty
+                  ? GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 1.15,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                      ),
+                      itemCount: 6,
+                      itemBuilder: (_, __) => Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                    )
+                  : categories.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'কোনো ক্যাটাগরি পাওয়া যায়নি',
+                            style: TextStyle(color: AppColors.textMuted),
+                          ),
+                        )
+                      : GridView.builder(
+                          padding: const EdgeInsets.all(16),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 1.15,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                          ),
+                          itemCount: categories.length,
+                          itemBuilder: (context, index) {
                   final cat = categories[index];
                   return InkWell(
                     onTap: () {

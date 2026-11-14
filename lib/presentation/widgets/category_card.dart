@@ -20,28 +20,27 @@ class CategoryCard extends StatelessWidget {
 
   IconData _getCategoryIcon(String? iconName) {
     switch (iconName?.toLowerCase()) {
+      case 'utensils':
+        return LucideIcons.utensils;
+      case 'shirt':
+        return LucideIcons.shirt;
+      case 'snowflake':
+        return LucideIcons.snowflake;
+      case 'sparkles':
+        return LucideIcons.sparkles;
+      case 'gift':
+        return LucideIcons.gift;
+      case 'shopping-bag':
+      case 'shoppingbag':
+        return LucideIcons.shoppingBag;
       case 'leaf':
         return LucideIcons.leaf;
       case 'fish':
         return LucideIcons.fish;
-      case 'drumstick':
-        return LucideIcons.drumstick;
-      case 'wheat':
-        return LucideIcons.wheat;
       case 'flame':
         return LucideIcons.flame;
-      case 'cookie':
-        return LucideIcons.cookie;
-      case 'cupsoda':
-        return LucideIcons.cupSoda;
-      case 'home':
-        return LucideIcons.home;
-      case 'smile':
-        return LucideIcons.smile;
-      case 'cake':
-        return LucideIcons.cake;
       default:
-        return LucideIcons.grid;
+        return LucideIcons.package;
     }
   }
 

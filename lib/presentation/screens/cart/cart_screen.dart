@@ -10,8 +10,9 @@ import '../../../core/utils/ui_helpers.dart';
 import '../../../providers/cart_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/empty_state_widget.dart';
-import '../checkout/checkout_screen.dart';
 import '../main_nav_screen.dart';
+import '../../widgets/whatsapp_order_sheet.dart';
+import '../../../providers/country_provider.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -404,6 +405,8 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildCheckoutBar(BuildContext context, CartProvider cartProvider) {
+    final country = context.watch<CountryProvider>().selectedCountry;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -426,26 +429,52 @@ class _CartScreenState extends State<CartScreen> {
               children: [
                 const Text('সর্বমোট মূল্য:', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 Text(
-                  Formatters.formatPrice(cartProvider.totalAmount),
+                  country.formatPrice(cartProvider.totalAmount),
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: FontWeight.w900,
                     color: AppColors.primary,
                   ),
                 ),
+                if (country.code != 'BD')
+                  Text(
+                    '৳${cartProvider.totalAmount.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 16),
             Expanded(
-              child: CustomButton(
-                text: 'চেকআউট করুন →',
+              child: SizedBox(
                 height: 48,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CheckoutScreen()),
-                  );
-                },
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 1,
+                  ),
+                  onPressed: () {
+                    WhatsAppOrderSheet.show(
+                      context,
+                      cartItems: cartProvider.items,
+                      customTotal: cartProvider.totalAmount,
+                    );
+                  },
+                  icon: const Icon(LucideIcons.messageCircle, size: 20, color: Colors.white),
+                  label: const Text(
+                    'WhatsApp-এ অর্ডার',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

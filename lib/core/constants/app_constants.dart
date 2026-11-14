@@ -1,6 +1,3 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
-
 class AppConstants {
   AppConstants._();
 
@@ -13,19 +10,13 @@ class AppConstants {
   static const String websiteUrl = 'https://probashmart.com';
 
   // Default dynamic base URL detection
-  static String get defaultBaseUrl {
-    if (kIsWeb) {
-      return 'http://127.0.0.1:8000';
-    }
-    try {
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:8000';
-      }
-    } catch (_) {}
-    return 'http://127.0.0.1:8000';
-  }
+  // Production live API with SSL & Cloudflare CDN
+  static const String productionBaseUrl = 'https://api.probashmart.com';
+  static const String serverDirectUrl = 'http://46.225.103.236:8003';
 
-  static const String productionBaseUrl = 'http://46.225.103.236:8003';
+  static String get defaultBaseUrl {
+    return productionBaseUrl;
+  }
 
   // Storage Keys
   static const String keyAccessToken = 'pm_access_token';
